@@ -1,0 +1,109 @@
+{
+    "entity_type": "mh_vm",
+    "filtered_entity_count": 3,
+    "filtered_group_count": 1,
+    "group_results": [
+        {
+            "entity_results": [
+                {
+                    "data": [
+                        {
+                            "data_type": "string",
+                            "name": "vm_name",
+                            "values": [
+                                {
+                                    "time": 1675774554623023,
+                                    "values": [
+                                        "apache-0-230207-045556"
+                                    ]
+                                }
+                            ]
+                        },
+                        {
+                            "name": "categories",
+                            "values": [
+                                {
+                                    "time": 1675849455541574,
+                                    "values": [
+                                        "OSType:Linux",
+                                        "CalmService:apache",
+                                        "CalmApplication:test-2",
+                                        "CalmUsername:admin"
+                                    ]
+                                }
+                            ]
+                        }
+                    ],
+                    "entity_id": "2decbc73-034c-4cd2-acff-3e39d462dd9b"
+                },
+                {
+                    "data": [
+                        {
+                            "data_type": "string",
+                            "name": "vm_name",
+                            "values": [
+                                {
+                                    "time": 1675774555065438,
+                                    "values": [
+                                        "apache-1-230207-045556"
+                                    ]
+                                }
+                            ]
+                        },
+                        {
+                            "name": "categories",
+                            "values": [
+                                {
+                                    "time": 1675849455541577,
+                                    "values": [
+                                        "OSType:Linux",
+                                        "CalmUsername:admin",
+                                        "CalmService:apache",
+                                        "CalmApplication:test-2"
+                                    ]
+                                }
+                            ]
+                        }
+                    ],
+                    "entity_id": "5164da77-c497-45d5-b2ed-54b714991803"
+                },
+                {
+                    "data": [
+                        {
+                            "data_type": "string",
+                            "name": "vm_name",
+                            "values": [
+                                {
+                                    "time": 1675774554669212,
+                                    "values": [
+                                        "apache-2-230207-045556"
+                                    ]
+                                }
+                            ]
+                        },
+                        {
+                            "name": "categories",
+                            "values": [
+                                {
+                                    "time": 1675849455541580,
+                                    "values": [
+                                        "OSType:Linux",
+                                        "CalmUsername:admin",
+                                        "CalmService:apache",
+                                        "CalmApplication:test-2"
+                                    ]
+                                }
+                            ]
+                        }
+                    ],
+                    "entity_id": "8d8c918d-22fe-4c8e-98cf-ec9efa1fb087"
+                }
+            ],
+            "group_by_column_value": "",
+            "group_summaries": {},
+            "total_entity_count": 3
+        }
+    ],
+    "total_entity_count": 8,
+    "total_group_count": 1
+}

@@ -1,0 +1,21 @@
+{
+    "entity_type": "mh_vm",
+    "query_name": "eb:data-1675848507780",
+    "grouping_attribute": " ",
+    "group_count": 3,
+    "group_offset": 0,
+    "group_attributes": [],
+    "group_member_count": 40,
+    "group_member_offset": 0,
+    "group_member_sort_attribute": "vm_name",
+    "group_member_sort_order": "ASCENDING",
+    "group_member_attributes": [
+        {
+            "attribute": "vm_name"
+        },
+        {
+            "attribute": "categories"
+        }
+    ],
+    "filter_criteria": "(platform_type!=aws,platform_type==[no_val]);is_cvm==0;power_state==on;(category_name==OSType;category_value==Linux);cluster==0005f32a-109d-46be-3f38-ac1f6b69b109"
+}
