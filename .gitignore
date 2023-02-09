@@ -134,4 +134,5 @@ dmypy.json
 .bash_history
 .DS_Store
 temp/
+*.log
 

@@ -5,10 +5,11 @@ import urllib3
 from datetime import datetime, timedelta
 import pytz
 import json
+from tabulate import tabulate
 
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-log = logging.getLogger('vm-reboot')
+log = logging.getLogger(__name__)
 
 
 def save_json(data, filename):
@@ -52,9 +53,12 @@ class PrismClient(requests.Session):
             log.info('Total clusters: {}'.format(len(r.json()['entities'])))
             log.debug('Clusters: {}'.format(r.json()['entities']))
             clusters = []
+            counter = 1
             for cluster in r.json()['entities']:
-                clusters.append({'name': cluster['status']['name'],
+                clusters.append({'no': counter, 'cluster_name': cluster['status']['name'],
                                  'uuid': cluster['metadata']['uuid']})
+                counter += 1
+            log.info('Clusters: {}'.format(clusters))
             return clusters
         else:
             log.error('Error listing clusters: {}'.format(r.text))
@@ -77,15 +81,20 @@ output_file = None
 @click.option('--username', '-u', prompt=True, help='Username for Prism Central')
 @click.option('--password', '-p', prompt=True, hide_input=True, help='Password for Prism Central')
 @click.option('--prism', '-pc', prompt=True, help='Prism Central IP or FQDN')
-@click.option('--verify', '-v', default=False, help='Verify SSL certificate (default: False)')
+@click.option('--verify', '-v', is_flag=True, default=False, help='Verify SSL certificate (default: False)')
 @click.option('--port', '-port', default=9440, help='Prism Central Port (default: 9440)')
-@click.option('--debug', '-d', default=False, help='Debug mode (default: False)')
+@click.option('--debug', '-d', is_flag=True, default=False, help='Debug mode (default: False)')
 @click.option('--logs_tz', '-tz', default='UTC', help='Logs timezone (default: UTC)')
-@click.option('--output', '-o', default=None, help='Output filename')
-def main(username, password, prism, verify, port, debug, logs_tz, output):
+@click.option('--console-log', '-cl', is_flag=True, default=False, help='Log to console (default: False)')
+@click.option('--output', '-o', default='vm-reboot.log', help='Log output filename (default: vm-reboot.log)')
+def main(username, password, prism, verify, port, debug, logs_tz, console_log, output):
 
     # configure logging
     global log
+
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+    # select logging level for console and file
     if debug:
         log.setLevel(logging.DEBUG)
         log_level = logging.DEBUG
@@ -93,11 +102,18 @@ def main(username, password, prism, verify, port, debug, logs_tz, output):
         log.setLevel(logging.INFO)
         log_level = logging.INFO
 
-    ch = logging.StreamHandler()
-    ch.setLevel(log_level)
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    ch.setFormatter(formatter)
-    log.addHandler(ch)
+    # file logging settings
+    file_handler = logging.FileHandler(output)
+    file_handler.setLevel(log_level)
+    file_handler.setFormatter(formatter)
+    log.addHandler(file_handler)
+
+    # console logging settings
+    if console_log:
+        console_handler = logging.StreamHandler()
+        console_handler.setLevel(log_level)
+        console_handler.setFormatter(formatter)
+        log.addHandler(console_handler)
 
     # configure prism client and test authentication
     prism_client.init(prism, port, username, password, verify)
@@ -124,10 +140,7 @@ def main(username, password, prism, verify, port, debug, logs_tz, output):
 def list_clusters():
     log.info('Listing clusters registered in Prism Central')
     clusters = prism_client.list_clusters()
-    i = 1
-    for cluster in clusters:
-        print(f'{i}. {cluster["name"]} ({cluster["uuid"]})')
-        i += 1
+    print(tabulate(clusters, headers='keys', tablefmt='psql'))
 
 
 if __name__ == '__main__':
