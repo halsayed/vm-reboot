@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 import pytz
 import json
 from tabulate import tabulate
+from time import sleep
 
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -118,6 +119,80 @@ class PrismClient(requests.Session):
             log.error('Error listing VMs: {}'.format(r.text))
             return None
 
+    def vm_poweroff(self, vm_uuid):
+        r = self.get(self.base_url + f'vms/{vm_uuid}')
+        payload = r.json()
+        del(payload['status'])
+        payload['spec']['resources']['power_state'] = 'OFF'
+        r = self.put(self.base_url + f'vms/{vm_uuid}', json=payload)
+        log.debug('Response: status code: {}, msg: {}'.format(r.status_code, r.text))
+        if r.status_code == 202:
+            log.debug(f'VM {vm_uuid} powered off successfully')
+            return True
+        else:
+            log.error(f'Error powering off VM: {vm_uuid}, msg: {r.text}')
+            return False
+
+    def vm_check_poweroff(self, vm_uuid):
+        r = self.get(self.base_url + f'vms/{vm_uuid}')
+        if r.status_code == 200:
+            if r.json()['status']['resources']['power_state'] == 'OFF':
+                log.debug(f'VM {vm_uuid} is powered off')
+                return True
+            else:
+                log.debug(f'VM {vm_uuid} is powered on')
+                return False
+        else:
+            log.error(f'Error checking VM power state: {vm_uuid}, msg: {r.text}')
+            return False
+
+    def vm_poweron(self, vm_uuid):
+        r = self.get(self.base_url + f'vms/{vm_uuid}')
+        payload = r.json()
+        del(payload['status'])
+        payload['spec']['resources']['power_state'] = 'ON'
+        r = self.put(self.base_url + f'vms/{vm_uuid}', json=payload)
+        log.debug('Response: status code: {}, msg: {}'.format(r.status_code, r.text))
+        if r.status_code == 202:
+            log.debug(f'VM {vm_uuid} powered on successfully')
+            return True
+        else:
+            log.error(f'Error powering on VM: {vm_uuid}, msg: {r.text}')
+            return False
+
+    def reboot_vms(self, vms, wait_time=2, max_retries=10):
+        log.info('Starting batch VM reboot')
+        poweroff_vms = []
+        for vm in vms:
+            log.debug(f'Powering off VM: {vm["vm_name"]}')
+            if self.vm_poweroff(vm['uuid']):
+                poweroff_vms.append(vm)
+            else:
+                log.error(f'Error powering off VM: {vm["vm_name"]}, uuid: {vm["uuid"]}')
+
+        log.info(f'Waiting for {len(poweroff_vms)} VMs to power off')
+        sleep(wait_time)
+        for vm in poweroff_vms:
+            retries = 0
+            while retries < max_retries:
+                if self.vm_check_poweroff(vm['uuid']):
+                    log.debug(f'VM {vm["vm_name"]} powered off')
+                    break
+                else:
+                    log.debug(f'VM {vm["vm_name"]} still powered on, retrying')
+                    retries += 1
+                    sleep(wait_time)
+            else:
+                log.error(f'VM {vm["vm_name"]} failed to power off')
+
+        log.info(f'Powering on {len(poweroff_vms)} VMs')
+        for vm in poweroff_vms:
+            if self.vm_poweron(vm['uuid']):
+                log.debug(f'VM {vm["vm_name"]} powered on')
+            else:
+                log.error(f'Error powering on VM: {vm["vm_name"]}, uuid: {vm["uuid"]}')
+        log.info(f'Batch VM reboot completed')
+
 
 prism_client = PrismClient()
 timezone = pytz.utc
@@ -152,7 +227,7 @@ def main(username, password, prism, verify, port, debug, logs_tz, disable_consol
 
     # file logging settings
     file_handler = logging.FileHandler(output)
-    file_handler.setLevel(logging.DEBUG)
+    file_handler.setLevel(log_level)
     file_handler.setFormatter(file_formatter)
     log.addHandler(file_handler)
 
@@ -198,6 +273,32 @@ def list_vms(cluster, category):
     log.info('Listing VMs in cluster {}'.format(cluster))
     vms = prism_client.list_vms(cluster, category)
     print(tabulate(vms, headers='keys', tablefmt='psql'))
+
+
+@main.command()
+@click.option('--cluster', '-c', prompt=True, help='Cluster UUID')
+@click.option('--category', '-cat', default=None, help='Category filter (key:value)')
+@click.option('--batch', '-b', default=25, help='Batch size (default: 25)')
+def reboot_vms(cluster, category, batch):
+    log.info('Listing VMs in cluster {}'.format(cluster))
+    vms = prism_client.list_vms(cluster, category)
+    print(tabulate(vms, headers='keys', tablefmt='psql'))
+    log.info('Rebooting VMs in cluster {}'.format(cluster))
+    log.info('Warning: This will reboot all VMs in the cluster, stop the script if you don\'t want to reboot all VMs')
+    sleep(5)
+    log.info('Starting reboot process')
+    log.info('Batch size: {}'.format(batch))
+    log.info('Total VMs: {}'.format(len(vms)))
+    for i in range(0, len(vms), batch):
+        if i+batch > len(vms):
+            batch_size = len(vms) - i
+        else:
+            batch_size = batch
+        log.info('Rebooting VMs {} to {}'.format(i+1, i+batch_size))
+        prism_client.reboot_vms(vms[i:i+batch_size])
+        log.info('Waiting 5 seconds before next batch')
+        sleep(4)
+    log.info('Reboot process completed')
 
 
 if __name__ == '__main__':
